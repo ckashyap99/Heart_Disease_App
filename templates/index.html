@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Disease Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(45deg, #f3a683, #f7b731);
+            margin: 0;
+            padding: 0;
+            color: #fff;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 700px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        h1 {
+            text-align: center;
+            color: #f3a683;
+            font-size: 36px;
+            margin-bottom: 30px;
+        }
+
+        form {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input {
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            border-color: #f7b731;
+            box-shadow: 0 0 8px rgba(247, 183, 49, 0.6);
+        }
+
+        button {
+            background-color: #f7b731;
+            color: #fff;
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #f3a683;
+            transform: scale(1.05);
+        }
+
+        #prediction-result {
+            display: none;
+            padding: 20px;
+            background-color: #f7b731;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        #prediction-result h2 {
+            color: #fff;
+            font-size: 24px;
+        }
+
+        .result p {
+            color: #333;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        #shap_plot {
+            display: none;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .error-message {
+            color: #f44336;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .result span {
+            color: #f7b731;
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Heart Disease Prediction</h1>
+        <form id="prediction-form">
+            <label for="Age">Age:</label>
+            <input type="number" id="Age" name="Age" required><br><br>
+
+            <label for="Sex">Sex (0 = Male, 1 = Female):</label>
+            <input type="number" id="Sex" name="Sex" required><br><br>
+
+            <label for="ChestPainType">Chest Pain Type (0, 1, 2, 3):</label>
+            <input type="number" id="ChestPainType" name="ChestPainType" required><br><br>
+
+            <label for="RestingBP">Resting Blood Pressure:</label>
+            <input type="number" id="RestingBP" name="RestingBP" required><br><br>
+
+            <label for="Cholesterol">Cholesterol:</label>
+            <input type="number" id="Cholesterol" name="Cholesterol" required><br><br>
+
+            <label for="FastingBS">Fasting Blood Sugar (0 or 1):</label>
+            <input type="number" id="FastingBS" name="FastingBS" required><br><br>
+
+            <label for="RestingECG">Resting Electrocardiographic Result (0, 1, 2):</label>
+            <input type="number" id="RestingECG" name="RestingECG" required><br><br>
+
+            <label for="MaxHR">Maximum Heart Rate:</label>
+            <input type="number" id="MaxHR" name="MaxHR" required><br><br>
+
+            <label for="ExerciseAngina">Exercise Angina (0 = No, 1 = Yes):</label>
+            <input type="number" id="ExerciseAngina" name="ExerciseAngina" required><br><br>
+
+            <label for="Oldpeak">Oldpeak:</label>
+            <input type="number" id="Oldpeak" name="Oldpeak" step="0.01" required><br><br>
+
+            <label for="ST_Slope">ST Slope (0, 1, 2):</label>
+            <input type="number" id="ST_Slope" name="ST_Slope" required><br><br>
+
+            <button type="submit">Predict</button>
+        </form>
+
+        <div id="prediction-result">
+            <h2>Prediction Result:</h2>
+            <div class="result">
+                <p id="prediction"></p>
+                <p id="prediction_probability"></p>
+                <p id="top_features"></p>
+            </div>
+
+            <h2>SHAP Plot:</h2>
+            <img id="shap_plot" src="" alt="SHAP Plot">
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("prediction-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            let formData = new FormData(this);
+            let data = {};
+            formData.forEach((value, key) => {
+                data[key] = parseFloat(value); // Convert inputs to numbers
+            });
+
+            fetch("/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.error) {
+                    alert(result.error);
+                } else {
+                    document.getElementById("prediction").textContent = `Prediction: ${result.prediction}`;
+                    document.getElementById("prediction_probability").textContent = `Prediction Probability: ${(result.prediction_probability * 100).toFixed(2)}%`;
+
+                    // Display top influential features
+                    document.getElementById("top_features").textContent = `Top Influential Features: ${result.top_influential_features.join(", ")}`;
+
+                    // Display SHAP plot if available
+                    if (result.shap_plot_url) {
+                        document.getElementById("shap_plot").src = result.shap_plot_url;
+                        document.getElementById("shap_plot").style.display = "block";
+                    }
+
+                    document.getElementById("prediction-result").style.display = "block";
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        });
+    </script>
+</body>
+</html>
