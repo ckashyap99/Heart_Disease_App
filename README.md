@@ -3,6 +3,7 @@
 This project is a Flask-based web application that predicts the likelihood of heart disease based on user inputs. 
 The model utilizes machine learning techniques to analyze key health indicators and provide predictions. 
 The app is containerized using Docker and deployed on AWS EC2, making it easily accessible and scalable.
+Link : http://ec2-51-21-192-243.eu-north-1.compute.amazonaws.com:5000/
 
 ## Features
 - User-friendly interface for inputting health data
